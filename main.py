@@ -37,15 +37,13 @@ def get_asana_tasks_by_color(color=asana_color, expired=False):
                 data["name"] = re.sub(r"\s+", " ", data["name"]).strip()
                 data["messages_sent"] = data["notes"].lower().count(f"lm {initials}")
                 data["warnings_sent"] = data["notes"].lower().count(f"lw {initials}")
-                data["messages_sent_top"] = (
-                    sum(
-                        1
-                        for line in data["notes"].splitlines()[:3]
-                        if f"lm {initials}" in line.lower()
-                    )
-                    if f"lm {initials}" in data["notes"].splitlines()[0].lower()
-                    else 0
-                )
+                data["messages_sent_top"] = 0
+                lines = data["notes"].splitlines()
+                for i, line in enumerate(lines):
+                    if f"lm {initials}" in line.lower():
+                        data["messages_sent_top"] = i + 1
+                    else:
+                        break
                 data["warning_on_top"] = (
                     f"lw {initials}" in data["notes"].splitlines()[0].lower()
                     if data["notes"]
@@ -67,7 +65,7 @@ def get_asana_tasks_by_color(color=asana_color, expired=False):
                         print(f"Skipping {data['name']}, already noted today.")
                         continue
                     print(
-                        f"\nName: {data['name']}\nLink: {data['permalink_url']}\nNotes: {data['notes'].strip()}"
+                        f"\n{colored.Fore.cyan}{colored.Style.bold}Name:{colored.Style.reset} {data['name']}\n{colored.Fore.magenta}{colored.Style.bold}Link:{colored.Style.reset} {data['permalink_url']}\n{colored.Fore.blue}{colored.Style.bold}Notes:{colored.Style.reset} {data['notes'].strip()}"
                     )
                     what_to_do(data)
 
