@@ -53,16 +53,13 @@ def get_asana_tasks_by_color(color=asana_color, expired=False):
                     data["name"] = re.sub(r"\s+", " ", data["name"]).strip()
                     get_expired(data)
                 else:
-                    if data["name"] == "test client pls ignore":
-                        if data["warning_on_top"]:
-                            print(
-                                f"Skipping {data['name']}, already sent final warning."
-                            )
-                            continue
-                        print(
-                            f"\nName: {data['name']}\nLink: {data['permalink_url']}\nNotes: {data['notes'].strip()}"
-                        )
-                        what_to_do(data)
+                    if data["warning_on_top"]:
+                        print(f"Skipping {data['name']}, already sent final warning.")
+                        continue
+                    print(
+                        f"\nName: {data['name']}\nLink: {data['permalink_url']}\nNotes: {data['notes'].strip()}"
+                    )
+                    what_to_do(data)
 
     except ApiException as e:
         print(
@@ -89,6 +86,7 @@ def add_to_notes(new_text, current_notes, project_gid):
 def replace_link(body, link):
     return body.replace(link, link + " - DONE", 1)
 
+
 def change_color(color, project_gid):
     body = {"data": {"color": color}}
     try:
@@ -99,14 +97,14 @@ def change_color(color, project_gid):
     except ApiException as e:
         print("Exception when calling ProjectsApi->update_project:: %s\n" % e)
 
+
 def what_to_do(data):
     body = data["notes"]
     allowed_domains = os.getenv("Q_LINKS").split(",")
     links = [
         link
         for link in re.findall(r"(https?://\S+[\s\S]*?)(?=\n|$)", body)
-        if " - DONE" not in link
-        and any(domain in link for domain in allowed_domains)
+        if " - DONE" not in link and any(domain in link for domain in allowed_domains)
     ]
 
     print("a <note> ".ljust(10) + "Add a note with the date")
@@ -187,7 +185,9 @@ def what_to_do(data):
                 for i, link in enumerate(links):
                     print(f"{i+1}. {link}")
                 while True:
-                    choice = input("Enter the numbers of the links to mark (space separated), or 'all' to mark all: ")
+                    choice = input(
+                        "Enter the numbers of the links to mark (space separated), or 'all' to mark all: "
+                    )
                     if choice.lower() == "all":
                         new_body = data["notes"]
                         for link in links:
