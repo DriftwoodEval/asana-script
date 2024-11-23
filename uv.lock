@@ -17,7 +17,7 @@ wheels = [
 ]
 
 [[package]]
-name = "asana-blue-script"
+name = "asana-script"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

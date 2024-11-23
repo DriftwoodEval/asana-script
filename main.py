@@ -76,7 +76,7 @@ def replace_notes(new_text, project_gid):
         api_response = projects_api_instance.update_project(
             body, project_gid, opts={"opt_fields": "name, notes"}
         )
-        print(f"Added note to {api_response['name']}")
+        print(f"Added note to {api_response['name']}.")
     except ApiException as e:
         print("Exception when calling ProjectsApi->update_project:: %s\n" % e)
 
@@ -89,18 +89,31 @@ def add_to_notes(new_text, current_notes, project_gid):
 def replace_link(body, link):
     return body.replace(link, link + " - DONE", 1)
 
+def change_color(color, project_gid):
+    body = {"data": {"color": color}}
+    try:
+        api_response = projects_api_instance.update_project(
+            body, project_gid, opts={"opt_fields": "name, color"}
+        )
+        print(f"Changed color of {api_response['name']} to {color}.")
+    except ApiException as e:
+        print("Exception when calling ProjectsApi->update_project:: %s\n" % e)
 
 def what_to_do(data):
     body = data["notes"]
+    allowed_domains = os.getenv("Q_LINKS").split(",")
     links = [
         link
         for link in re.findall(r"(https?://\S+[\s\S]*?)(?=\n|$)", body)
         if " - DONE" not in link
+        and any(domain in link for domain in allowed_domains)
     ]
 
     print("a <note> ".ljust(10) + "Add a note with the date")
     print("qs ".ljust(10) + "Add the self-report link and the parent/guardian link")
-    if links:
+    if len(links) > 1:
+        print("d ".ljust(10) + "Mark links as done")
+    elif len(links) == 1:
         print("d ".ljust(10) + "Mark link as done")
     print("m ".ljust(10) + "Message sent")
     print("w ".ljust(10) + "Generate warning and mark as sent")
@@ -167,25 +180,42 @@ def what_to_do(data):
     elif command == "d":
         if links:
             if len(links) == 1:
-                replace_notes(replace_link(data["notes"], links[0]), data["gid"])
+                new_body = replace_link(data["notes"], links[0])
+                replace_notes(new_body, data["gid"])
             else:
                 print("Which link to mark as completed?")
                 for i, link in enumerate(links):
                     print(f"{i+1}. {link}")
-                choice = input("> ")
-                try:
-                    choice = int(choice)
-                    if 1 <= choice <= len(links):
-                        chosen_link = links[choice - 1]
-                        replace_notes(
-                            replace_link(data["notes"], chosen_link), data["gid"]
-                        )
+                while True:
+                    choice = input("Enter the numbers of the links to mark (space separated), or 'all' to mark all: ")
+                    if choice.lower() == "all":
+                        new_body = data["notes"]
+                        for link in links:
+                            new_body = replace_link(new_body, link)
+                        replace_notes(new_body, data["gid"])
+                        break
                     else:
-                        print("Invalid choice.")
-                        what_to_do(data)
-                except ValueError:
-                    print("Invalid input.")
-                    what_to_do(data)
+                        try:
+                            choices = list(map(int, choice.split()))
+                            if all(1 <= c <= len(links) for c in choices):
+                                new_body = data["notes"]
+                                for choice in choices:
+                                    chosen_link = links[choice - 1]
+                                    new_body = replace_link(new_body, chosen_link)
+                                replace_notes(new_body, data["gid"])
+                                break
+                            else:
+                                print("Invalid choice.")
+                        except ValueError:
+                            print("Invalid input.")
+            new_links = [
+                link
+                for link in re.findall(r"(https?://\S+[\s\S]*?)(?=\n|$)", new_body)
+                if " - DONE" not in link
+                and any(domain in link for domain in allowed_domains)
+            ]
+            if not new_links:
+                change_color("light-purple", data["gid"])
         else:
             print("No links found.")
             what_to_do(data)
