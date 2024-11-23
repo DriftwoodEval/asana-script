@@ -1,0 +1,10 @@
+[project]
+name = "asana-script"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "asana>=5.0.10",
+    "colored>=2.2.4",
+    "python-dotenv>=1.0.1",
+]
