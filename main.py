@@ -37,10 +37,14 @@ def get_asana_tasks_by_color(color=asana_color, expired=False):
                 data["name"] = re.sub(r"\s+", " ", data["name"]).strip()
                 data["messages_sent"] = data["notes"].lower().count(f"lm {initials}")
                 data["warnings_sent"] = data["notes"].lower().count(f"lw {initials}")
-                data["messages_sent_top"] = sum(
-                    1
-                    for line in data["notes"].splitlines()[:5]
-                    if f"lm {initials}" in line.lower()
+                data["messages_sent_top"] = (
+                    sum(
+                        1
+                        for line in data["notes"].splitlines()[:3]
+                        if f"lm {initials}" in line.lower()
+                    )
+                    if f"lm {initials}" in data["notes"].splitlines()[0].lower()
+                    else 0
                 )
                 data["warning_on_top"] = (
                     f"lw {initials}" in data["notes"].splitlines()[0].lower()
@@ -55,6 +59,12 @@ def get_asana_tasks_by_color(color=asana_color, expired=False):
                 else:
                     if data["warning_on_top"]:
                         print(f"Skipping {data['name']}, already sent final warning.")
+                        continue
+                    if (
+                        datetime.now().strftime("%m/%d")
+                        in data["notes"].splitlines()[0]
+                    ):
+                        print(f"Skipping {data['name']}, already noted today.")
                         continue
                     print(
                         f"\nName: {data['name']}\nLink: {data['permalink_url']}\nNotes: {data['notes'].strip()}"
