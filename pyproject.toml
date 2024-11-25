@@ -9,3 +9,7 @@ dependencies = [
     "keyring>=25.5.0",
     "python-dotenv>=1.0.1",
 ]
+[tool.uv]
+dev-dependencies = [
+    "pyinstaller>=6.10.0",
+]
