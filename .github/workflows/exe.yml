@@ -6,7 +6,7 @@ on:
 
 env:
   filename: main
-  name: DistPsych
+  name: AsanaScript
 
 jobs:
   build:
