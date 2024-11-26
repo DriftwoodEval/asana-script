@@ -9,8 +9,6 @@ env:
   name_full: AsanaScript
   filename_bare: barebones
   name_bare: AsanaList
-  ASANA_TOKEN: ${{ secrets.ASANA_TOKEN }}
-  ASANA_WORKSPACE_GID: ${{ secrets.ASANA_WORKSPACE_GID }}
 
 jobs:
   build_full:
@@ -64,13 +62,18 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
-      - name: Build windows .exe
+      - name: Write secrets
         env:
           ASANA_TOKEN: ${{ secrets.ASANA_TOKEN }}
           ASANA_WORKSPACE_GID: ${{ secrets.ASANA_WORKSPACE_GID }}
         run: |
+          echo "__import__('os').environ.setdefault('ASANA_TOKEN', '$env:ASANA_TOKEN')" > secrets.py
+          echo "__import__('os').environ.setdefault('ASANA_WORKSPACE_GID', '$env:ASANA_WORKSPACE_GID')" >> secrets.py
+
+      - name: Build windows .exe
+        run: |
           .venv\Scripts\Activate.ps1
-          pyinstaller --noconfirm --onefile --clean --windowed --name "${{env.name_bare}}" "${{env.filename_bare}}.py"
+          pyinstaller --runtime-hook secrets.py --noconfirm --onefile --clean --windowed --name "${{env.name_bare}}" "${{env.filename_bare}}.py"
 
       - uses: actions/upload-artifact@v4
         with:
