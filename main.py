@@ -40,6 +40,6 @@ if __name__ == "__main__":
     elif args.reset:
         src.config.reset(args.reset)
     elif args.color:
-        src.api.get_asana_tasks_by_color(color=args.color)
+        src.api.get_asana_tasks_by_color(colors=[args.color])
     else:
         src.api.get_asana_tasks_by_color()
