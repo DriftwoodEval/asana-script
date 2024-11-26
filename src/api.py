@@ -19,12 +19,20 @@ def get_asana_tasks_by_color(colors=None, expired=False):
         "opt_fields": "name,color,permalink_url,notes",
     }
     try:
-        api_response = src.config.projects_api_instance.get_projects_for_workspace(
-            src.config.WORKSPACE_GID, opts
+        print("Fetching projects...")
+
+        api_response = list(
+            src.config.projects_api_instance.get_projects_for_workspace(
+                src.config.WORKSPACE_GID, opts
+            )
         )
-        for data in api_response:
-            if data["color"] not in colors:
-                continue
+
+        filtered_projects = [data for data in api_response if data["color"] in colors]
+        project_count = len(filtered_projects)
+
+        print(f"Found {project_count} projects.")
+
+        for i, data in enumerate(filtered_projects, 1):
             if not src.config.ADMIN_MODE:
                 data["name"] = re.sub(r"\[.*?\]|\{.*?\}|[^\w\s]", "", data["name"])
             data["name"] = re.sub(r"\s+", " ", data["name"]).strip()
@@ -36,9 +44,9 @@ def get_asana_tasks_by_color(colors=None, expired=False):
             )
             data["messages_sent_top"] = 0
             lines = data["notes"].splitlines()
-            for i, line in enumerate(lines):
+            for j, line in enumerate(lines):
                 if f"lm {src.config.INITIALS}" in line.lower():
-                    data["messages_sent_top"] = i + 1
+                    data["messages_sent_top"] = j + 1
                 else:
                     break
             data["warning_on_top"] = (
@@ -56,7 +64,7 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                     if data["warning_on_top"]:
                         print(f"Skipping {data['name']}, already sent final warning.")
                         continue
-                    if (
+                    if data["notes"] and (
                         datetime.now().strftime("%m/%d")
                         in data["notes"].splitlines()[0]
                     ):
@@ -64,11 +72,11 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                         continue
                 if sys.platform == "linux":
                     print(
-                        f"\n{colored.Fore.cyan}{colored.Style.bold}Name:{colored.Style.reset} {data['name']}\n{colored.Fore.magenta}{colored.Style.bold}Link:{colored.Style.reset} {data['permalink_url']}\n{colored.Fore.blue}{colored.Style.bold}Notes:{colored.Style.reset} {data['notes'].strip()}"
+                        f"\n({i}/{project_count})\n{colored.Fore.cyan}{colored.Style.bold}Name:{colored.Style.reset} {data['name']}\n{colored.Fore.magenta}{colored.Style.bold}Link:{colored.Style.reset} {data['permalink_url']}\n{colored.Fore.blue}{colored.Style.bold}Notes:{colored.Style.reset} {data['notes'].strip()}"
                     )
                 else:
                     print(
-                        f"\nName: {data['name']}\nLink: {data['permalink_url']}\nNotes: {data['notes'].strip()}"
+                        f"\n({i}/{project_count})\nName: {data['name']}\nLink: {data['permalink_url']}\nNotes: {data['notes'].strip()}"
                     )
                 src.utils.what_to_do(data)
 
