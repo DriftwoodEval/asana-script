@@ -1,4 +1,5 @@
 import re
+import sys
 from datetime import datetime
 
 import colored
@@ -61,9 +62,14 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                     ):
                         print(f"Skipping {data['name']}, already noted today.")
                         continue
-                print(
-                    f"\n{colored.Fore.cyan}{colored.Style.bold}Name:{colored.Style.reset} {data['name']}\n{colored.Fore.magenta}{colored.Style.bold}Link:{colored.Style.reset} {data['permalink_url']}\n{colored.Fore.blue}{colored.Style.bold}Notes:{colored.Style.reset} {data['notes'].strip()}"
-                )
+                if sys.platform == "linux":
+                    print(
+                        f"\n{colored.Fore.cyan}{colored.Style.bold}Name:{colored.Style.reset} {data['name']}\n{colored.Fore.magenta}{colored.Style.bold}Link:{colored.Style.reset} {data['permalink_url']}\n{colored.Fore.blue}{colored.Style.bold}Notes:{colored.Style.reset} {data['notes'].strip()}"
+                    )
+                else:
+                    print(
+                        f"\nName: {data['name']}\nLink: {data['permalink_url']}\nNotes: {data['notes'].strip()}"
+                    )
                 src.utils.what_to_do(data)
 
     except ApiException as e:
