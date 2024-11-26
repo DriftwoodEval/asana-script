@@ -80,6 +80,8 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                     )
                 src.utils.what_to_do(data)
 
+        if sys.platform != "linux":
+            input("End of list! You can close this window now.")
     except ApiException as e:
         print(
             "Exception when calling ProjectsApi->get_projects_for_workspace: %s\n" % e
