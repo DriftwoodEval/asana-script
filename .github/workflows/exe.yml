@@ -95,12 +95,13 @@ jobs:
           name: "${{env.name_bare}}.exe"
           path: ./
 
+      - run: ls
+
       - name: Generate release timestamp
         id: timestamp
         run: echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+
       - uses: softprops/action-gh-release@v2
         with:
-          files: |
-            "./${{env.name_full}}.exe"
-            "./${{env.name_bare}}.exe"
+          files: ${{env.name_full}}.exe,${{env.name_bare}}.exe
           tag_name: "v${{ steps.timestamp.outputs.timestamp }}"
