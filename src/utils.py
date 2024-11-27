@@ -14,7 +14,7 @@ def add_to_notes(new_text, current_notes, project_gid):
     new_text = today_str + " " + new_text
     if src.config.ADMIN_MODE:
         new_text += " ///" + src.config.INITIALS
-    src.utils.replace_notes(new_text + "\n" + current_notes, project_gid)
+    src.api.replace_notes(new_text + "\n" + current_notes, project_gid)
 
 
 def replace_link(body, link):
