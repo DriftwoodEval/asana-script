@@ -30,7 +30,10 @@ def get_asana_tasks_by_color(colors=None, expired=False):
         filtered_projects = [data for data in api_response if data["color"] in colors]
         project_count = len(filtered_projects)
 
-        print(f"Found {project_count} projects.")
+        if project_count == 1:
+            print("Found 1 project.")
+        else:
+            print(f"Found {project_count} projects.")
 
         for i, data in enumerate(filtered_projects, 1):
             if not src.config.ADMIN_MODE:
@@ -54,6 +57,8 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                 if data["notes"]
                 else False
             )
+            hold_match = re.search(r"hold\s+(\d{1,2}/\d{1,2})", data["notes"])
+            data["hold"] = hold_match.group(1) if hold_match else None
 
             if expired:
                 data["name"] = re.sub(r"(ASD|ADHD)", "", data["name"])
@@ -67,9 +72,23 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                     if data["notes"] and (
                         datetime.now().strftime("%m/%d")
                         in data["notes"].splitlines()[0]
+                        and "hold" not in data["notes"].splitlines()[0].lower()
                     ):
                         print(f"Skipping {data['name']}, already noted today.")
                         continue
+                    if data["hold"]:
+                        current_month = datetime.now().month
+                        year = datetime.now().year
+                        if current_month in [1, 2] and data["hold"] not in ["01", "02"]:
+                            year -= 1
+                        hold_date = datetime.strptime(
+                            f"{data['hold']}/{year}", "%m/%d/%Y"
+                        )
+                        if hold_date > datetime.now():
+                            print(
+                                f"Skipping {data['name']}, on hold until {data['hold']}."
+                            )
+                            continue
                 if sys.platform == "linux":
                     print(
                         f"\n({i}/{project_count})\n{Fore.cyan}{Style.bold}Name:{Style.reset} {data['name']}\n{Fore.magenta}{Style.bold}Link:{Style.reset} {data['permalink_url']}\n{Fore.blue}{Style.bold}Notes:{Style.reset} {data['notes'].strip()}"

@@ -9,11 +9,11 @@ import src.config
 import src.utils
 
 
-def add_to_notes(new_text, current_notes, project_gid):
+def add_to_notes(new_text, current_notes, project_gid, with_initials=False):
     today_str = datetime.now().strftime("%m/%d")
-    new_text = today_str + " " + new_text
-    if src.config.ADMIN_MODE:
-        new_text += " ///" + src.config.INITIALS
+    new_text = today_str + " " + str(new_text)
+    if with_initials:
+        new_text += f" {'///' if src.config.ADMIN_MODE else ''}{src.config.INITIALS}"
     src.api.replace_notes(new_text + "\n" + current_notes, project_gid)
 
 
@@ -115,6 +115,10 @@ def what_to_do(data):
         ]
 
     print("a <note> ".ljust(10) + "Add a note with the date")
+    print(
+        "h <days or date> ".ljust(10)
+        + "Add a hold for <days> or until <date> in MM/DD format"
+    )
     if not src.config.ADMIN_MODE:
         print("qs ".ljust(10) + "Add the self-report link and the parent/guardian link")
         if len(links) > 1:
@@ -147,20 +151,28 @@ def what_to_do(data):
 
     if command.startswith("a "):
         additional_text = command[2:].strip()
-        add_to_notes(additional_text, data["notes"], data["gid"])
+        add_to_notes(additional_text, data["notes"], data["gid"], src.config.ADMIN_MODE)
         if src.config.ADMIN_MODE:
             src.api.change_color("light-purple", data["gid"])
+    elif command.startswith("h "):
+        additional_text = command[2:].strip()
+        if "/" in additional_text:
+            hold_date = additional_text
+        else:
+            try:
+                days = int(additional_text)
+                hold_date = (datetime.now() + timedelta(days=days)).strftime("%m/%d")
+            except ValueError:
+                print("Invalid input.")
+                what_to_do(data)
+        add_to_notes("hold " + hold_date, data["notes"], data["gid"], True)
     elif command == "s":
         pass
     elif not src.config.ADMIN_MODE:
         if command == "qs":
             multiple_questionnaires(data)
         elif command == "m":
-            add_to_notes(
-                "lm " + src.config.INITIALS,
-                data["notes"],
-                data["gid"],
-            )
+            add_to_notes("lm", data["notes"], data["gid"], True)
         elif command == "w":
             generate_warning(data)
         elif command == "d" and links:
