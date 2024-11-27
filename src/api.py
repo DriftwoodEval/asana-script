@@ -2,8 +2,8 @@ import re
 import sys
 from datetime import datetime
 
-import colored
 from asana.rest import ApiException
+from colored import Fore, Style
 
 import src.config
 import src.utils
@@ -72,7 +72,7 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                         continue
                 if sys.platform == "linux":
                     print(
-                        f"\n({i}/{project_count})\n{colored.Fore.cyan}{colored.Style.bold}Name:{colored.Style.reset} {data['name']}\n{colored.Fore.magenta}{colored.Style.bold}Link:{colored.Style.reset} {data['permalink_url']}\n{colored.Fore.blue}{colored.Style.bold}Notes:{colored.Style.reset} {data['notes'].strip()}"
+                        f"\n({i}/{project_count})\n{Fore.cyan}{Style.bold}Name:{Style.reset} {data['name']}\n{Fore.magenta}{Style.bold}Link:{Style.reset} {data['permalink_url']}\n{Fore.blue}{Style.bold}Notes:{Style.reset} {data['notes'].strip()}"
                     )
                 else:
                     print(

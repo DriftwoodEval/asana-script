@@ -2,7 +2,7 @@ import os
 import re
 from datetime import datetime, timedelta
 
-import colored
+from colored import fg, stylize
 
 import src.api
 import src.config
@@ -128,33 +128,20 @@ def what_to_do(data):
     if not src.config.ADMIN_MODE:
         messages_left = 3 - data["messages_sent_top"]
         if messages_left > 0:
-            if messages_left == 3:
-                print(
-                    colored.stylize(
-                        f"{messages_left} messages left before warning.",
-                        colored.fg("green"),
-                    )
-                )
-            elif messages_left == 2:
-                print(
-                    colored.stylize(
-                        f"{messages_left} messages left before warning.",
-                        colored.fg("yellow"),
-                    )
-                )
-            elif messages_left == 1 or messages_left == 0:
-                print(
-                    colored.stylize(
-                        f"{messages_left} message left before warning.",
-                        colored.fg("orange_1"),
-                    )
-                )
-        elif messages_left == 0 and not data["warning_on_top"]:
             print(
-                colored.stylize(
-                    "It's time to send the final warning.", colored.fg("red")
+                stylize(
+                    f"{messages_left} {'message' if messages_left == 1 else 'messages'} left before warning.",
+                    fg(
+                        "green"
+                        if messages_left > 2
+                        else "yellow"
+                        if messages_left == 2
+                        else "orange_1"
+                    ),
                 )
             )
+        elif messages_left == 0 and not data["warning_on_top"]:
+            print(stylize("It's time to send the final warning.", fg("red")))
 
     command = input("What's new? ")
 
