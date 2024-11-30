@@ -37,14 +37,12 @@ def get_secret(env_name, key_name):
 
 
 def reset(key: str):
-    valid_keys = ["all", "token", "workspace", "initials"]
+    valid_keys = ["all", "token", "initials"]
     if key not in valid_keys:
         raise ValueError(f"Invalid key. Must be one of: {', '.join(valid_keys)}")
     if key == "all":
         if keyring.get_password("asana", "token"):
             keyring.delete_password("asana", "token")
-        if keyring.get_password("asana", "workspace"):
-            keyring.delete_password("asana", "workspace")
         if keyring.get_password("asana", "initials"):
             keyring.delete_password("asana", "initials")
         print("All keys deleted.")
