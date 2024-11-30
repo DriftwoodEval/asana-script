@@ -1,6 +1,6 @@
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from asana.rest import ApiException
 from colored import Fore, Style
@@ -72,10 +72,15 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                     if data["notes"] and (
                         datetime.now().strftime("%m/%d")
                         in data["notes"].splitlines()[0]
+                        or (datetime.now() - timedelta(days=1)).strftime("%m/%d")
+                        in data["notes"].splitlines()[0]
                         and "hold" not in data["notes"].splitlines()[0].lower()
                     ):
-                        print(f"Skipping {data['name']}, already noted today.")
+                        print(
+                            f"Skipping {data['name']}, already noted today or yesterday."
+                        )
                         continue
+
                     if data["hold"]:
                         current_month = datetime.now().month
                         year = datetime.now().year
