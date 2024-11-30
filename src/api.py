@@ -35,6 +35,19 @@ def get_asana_tasks_by_color(colors=None, expired=False):
         else:
             print(f"Found {project_count} projects.")
 
+        if not expired and not src.config.ADMIN_MODE:
+            filtered_projects = [
+                data
+                for data in filtered_projects
+                if data["notes"]
+                and f"lw {src.config.INITIALS}"
+                not in data["notes"].splitlines()[0].lower()
+            ]
+            project_count = len(filtered_projects)
+            print(
+                f"Removed projects with warnings on top. New project count: {project_count}"
+            )
+
         for i, data in enumerate(filtered_projects, 1):
             if not src.config.ADMIN_MODE:
                 data["name"] = re.sub(r"\[.*?\]|\{.*?\}|[^\w\s]", "", data["name"])
@@ -66,9 +79,6 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                 src.utils.get_expired(data)
             else:
                 if not src.config.ADMIN_MODE:
-                    if data["warning_on_top"]:
-                        print(f"Skipping {data['name']}, already sent final warning.")
-                        continue
                     if data["notes"] and (
                         datetime.now().strftime("%m/%d")
                         in data["notes"].splitlines()[0]
@@ -118,7 +128,7 @@ def replace_notes(new_text, project_gid):
         api_response = src.config.projects_api_instance.update_project(
             body, project_gid, opts={"opt_fields": "name, notes"}
         )
-        print(f"Added note to {api_response['name']}.")
+        print(f"Added note to {api_response['name'].strip()}.")
     except ApiException as e:
         print("Exception when calling ProjectsApi->update_project:: %s\n" % e)
 
