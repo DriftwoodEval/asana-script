@@ -27,7 +27,7 @@ if __name__ == "__main__":
         nargs="?",
         const="all",
         help=argparse.SUPPRESS
-        if any(
+        if not any(
             keyring.get_password("asana", key)
             for key in ["token", "workspace", "initials"]
         )
