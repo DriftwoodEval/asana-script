@@ -10,6 +10,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Retrieve Asana tasks based on color or expiration status."
     )
+    parser.add_argument("-s", "--search", help="Search by name")
     parser.add_argument(
         "-c",
         "--color",
@@ -41,5 +42,16 @@ if __name__ == "__main__":
         src.config.reset(args.reset)
     elif args.color:
         src.api.get_asana_tasks_by_color(colors=[args.color])
+    elif args.search:
+        src.api.search_by_name(args.search)
     else:
-        src.api.get_asana_tasks_by_color()
+        if src.config.ADMIN_MODE:
+            print("s <term>".ljust(10) + "Search by name")
+            print("c ".ljust(10) + "Go through color(s)")
+            choice = input("Choose: ")
+            if choice.startswith("s "):
+                src.api.search_by_name(choice[2:].strip())
+            elif choice == "c":
+                src.api.get_asana_tasks_by_color(["light-blue"])
+        else:
+            src.api.get_asana_tasks_by_color()

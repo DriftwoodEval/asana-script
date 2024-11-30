@@ -100,18 +100,93 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                         )
                         continue
 
-                if sys.platform == "linux":
-                    print(
-                        f"\n({i}/{project_count})\n{Fore.cyan}{Style.bold}Name:{Style.reset} {data['name']}\n{Fore.magenta}{Style.bold}Link:{Style.reset} {data['permalink_url']}\n{Fore.blue}{Style.bold}Notes:{Style.reset} {data['notes'].strip()}"
-                    )
-                else:
-                    print(
-                        f"\n({i}/{project_count})\nName: {data['name']}\nLink: {data['permalink_url']}\nNotes: {data['notes'].strip()}"
-                    )
-                src.utils.what_to_do(data)
+                print_project(data, count=[i, project_count])
+                src.utils.what_to_do(data, "colors")
 
         if sys.platform != "linux":
             input("End of list! You can close this window now.")
+    except ApiException as e:
+        print(
+            "Exception when calling ProjectsApi->get_projects_for_workspace: %s\n" % e
+        )
+
+
+def print_project(
+    data: dict,
+    count: list[int, int] = None,
+    fields: list[str] = ["name", "link", "notes"],
+):
+    print_str = []
+    if "name" in fields:
+        name_str = f"Name: {data['name']}"
+        if sys.platform == "linux":
+            name_str = f"{Fore.cyan}{Style.bold}Name:{Style.reset} {data['name']}"
+        print_str.append(name_str)
+
+    if "link" in fields:
+        link_str = f"Link: {data['permalink_url']}"
+        if sys.platform == "linux":
+            link_str = (
+                f"{Fore.magenta}{Style.bold}Link:{Style.reset} {data['permalink_url']}"
+            )
+        print_str.append(link_str)
+
+    if "notes" in fields:
+        notes_str = f"Notes: {data['notes'].strip()}"
+        if sys.platform == "linux":
+            notes_str = (
+                f"{Fore.blue}{Style.bold}Notes:{Style.reset} {data['notes'].strip()}"
+            )
+        print_str.append(notes_str)
+
+    count_str = f"\n({count[0]}/{count[1]})\n" if count else ""
+    print(f"{count_str}" + "\n".join(print_str))
+
+
+def search_by_name(name):
+    src.config.get_consts()
+    opts = {
+        "limit": 100,
+        "archived": False,
+        "opt_fields": "name,color,permalink_url,notes",
+    }
+    try:
+        print(f"Searching projects for {name}...")
+
+        api_response = list(
+            src.config.projects_api_instance.get_projects_for_workspace(
+                src.config.WORKSPACE_GID, opts
+            )
+        )
+
+        filtered_projects = [
+            data for data in api_response if name.lower() in data["name"].lower()
+        ]
+        project_count = len(filtered_projects)
+
+        correct_project = None
+
+        if project_count == 1:
+            print("Found 1 project.")
+            correct_project = filtered_projects[0]
+        else:
+            print(f"Found {project_count} projects.")
+            for i, data in enumerate(filtered_projects, 1):
+                data["name"] = re.sub(r"\s+", " ", data["name"]).strip()
+                print_project(data, count=[i, project_count], fields=["name"])
+            while True:
+                choice = input(
+                    f"Enter the number of the correct project (1-{project_count}): "
+                )
+                try:
+                    correct_project = filtered_projects[int(choice) - 1]
+                    break
+                except (ValueError, IndexError):
+                    print("Invalid input.")
+        if correct_project:
+            print("\n")
+            print_project(correct_project)
+            src.utils.what_to_do(correct_project, "search")
     except ApiException as e:
         print(
             "Exception when calling ProjectsApi->get_projects_for_workspace: %s\n" % e

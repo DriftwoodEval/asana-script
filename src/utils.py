@@ -103,7 +103,7 @@ def get_expired(data):
             pass
 
 
-def what_to_do(data):
+def what_to_do(data, source: str = None):
     body = data["notes"]
     if not src.config.ADMIN_MODE:
         allowed_domains = os.getenv("Q_LINKS").split(",")
@@ -114,22 +114,22 @@ def what_to_do(data):
             and any(domain in link for domain in allowed_domains)
         ]
 
-    print("a <note> ".ljust(10) + "Add a note with the date")
+    print("a <note> ".ljust(20) + "Add a note with the date")
     print(
-        "h <days or date> ".ljust(10)
+        "h <days or date> ".ljust(20)
         + "Add a hold for <days> or until <date> in MM/DD format"
     )
     if not src.config.ADMIN_MODE:
-        print("qs ".ljust(10) + "Add the self-report link and the parent/guardian link")
+        print("qs ".ljust(20) + "Add the self-report link and the parent/guardian link")
         if len(links) > 1:
-            print("d ".ljust(10) + "Mark links as done")
+            print("d ".ljust(20) + "Mark links as done")
         elif len(links) == 1:
-            print("d ".ljust(10) + "Mark link as done")
-        print("m ".ljust(10) + "Message sent")
-        print("w ".ljust(10) + "Generate warning and mark as sent")
-    print("s ".ljust(10) + "Skip")
+            print("d ".ljust(20) + "Mark link as done")
+        print("m ".ljust(20) + "Message sent")
+        print("w ".ljust(20) + "Generate warning and mark as sent")
+    print("s ".ljust(20) + "Skip")
 
-    if not src.config.ADMIN_MODE:
+    if not src.config.ADMIN_MODE and data.get("messages_sent_top"):
         messages_left = 3 - data["messages_sent_top"]
         if messages_left > 0:
             print(
@@ -153,7 +153,30 @@ def what_to_do(data):
         additional_text = command[2:].strip()
         add_to_notes(additional_text, data["notes"], data["gid"], src.config.ADMIN_MODE)
         if src.config.ADMIN_MODE:
-            src.api.change_color("light-purple", data["gid"])
+            if source == "search":
+                print("Select a color:")
+
+                current_color = data["color"]
+                if current_color == "light-purple":
+                    current_color = "purple"
+                elif current_color == "dark-pink":
+                    current_color = "pink"
+                elif current_color == "light-blue":
+                    current_color = "blue"
+                elif current_color == "dark-teal":
+                    current_color = "light blue"
+
+                print(f"<Enter> - No change (currently {current_color})")
+                print("1 - Purple")
+                print("2 - Pink")
+                color = input("Color to change to: ")
+
+                if color == "1":
+                    src.api.change_color("light-purple", data["gid"])
+                elif color == "2":
+                    src.api.change_color("dark-pink", data["gid"])
+            else:
+                src.api.change_color("light-purple", data["gid"])
     elif command.startswith("h "):
         additional_text = command[2:].strip()
         if "/" in additional_text:
