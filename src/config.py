@@ -36,22 +36,21 @@ def get_secret(env_name, key_name):
     return secret
 
 
-def reset(args):
+def reset(key: str):
     valid_keys = ["all", "token", "workspace", "initials"]
-    if not all(key in valid_keys for key in args):
-        raise ValueError("Invalid key. Must be one of: " + ", ".join(valid_keys))
-    for key in args:
-        if key == "all":
-            if keyring.get_password("asana", "token"):
-                keyring.delete_password("asana", "token")
-            if keyring.get_password("asana", "workspace"):
-                keyring.delete_password("asana", "workspace")
-            if keyring.get_password("asana", "initials"):
-                keyring.delete_password("asana", "initials")
-            print("All keys deleted.")
+    if key not in valid_keys:
+        raise ValueError(f"Invalid key. Must be one of: {', '.join(valid_keys)}")
+    if key == "all":
+        if keyring.get_password("asana", "token"):
+            keyring.delete_password("asana", "token")
+        if keyring.get_password("asana", "workspace"):
+            keyring.delete_password("asana", "workspace")
+        if keyring.get_password("asana", "initials"):
+            keyring.delete_password("asana", "initials")
+        print("All keys deleted.")
+    else:
+        if keyring.get_password("asana", key):
+            keyring.delete_password("asana", key)
+            print(f"{key.capitalize()} deleted.")
         else:
-            if keyring.get_password("asana", key):
-                keyring.delete_password("asana", key)
-                print(f"{key.capitalize()} deleted.")
-            else:
-                print(f"{key.capitalize()} not found.")
+            print(f"{key.capitalize()} not found.")
