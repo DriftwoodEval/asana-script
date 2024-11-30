@@ -169,6 +169,8 @@ def search_by_name(name):
         if project_count == 1:
             print("Found 1 project.")
             correct_project = filtered_projects[0]
+        if project_count == 0:
+            input("No projects found.")
         else:
             print(f"Found {project_count} projects.")
             for i, data in enumerate(filtered_projects, 1):
