@@ -21,7 +21,7 @@ def get_consts():
 
     WORKSPACE_GID = get_secret("ASANA_WORKSPACE_GID", "workspace")
 
-    ASANA_COLORS = getenv("ASANA_COLORS").split(",")
+    ASANA_COLORS = getenv("ASANA_COLORS", "light-blue").split(",")
 
     INITIALS = get_secret("USER_INITIALS", "initials")
 
