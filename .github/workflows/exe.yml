@@ -31,10 +31,16 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
+      - name: Write secrets
+        env:
+          ASANA_WORKSPACE_GID: ${{ secrets.ASANA_WORKSPACE_GID }}
+        run: |
+          echo "__import__('os').environ.setdefault('ASANA_WORKSPACE_GID', '$env:ASANA_WORKSPACE_GID')" >> secrets.py
+
       - name: Build windows .exe
         run: |
           .venv\Scripts\Activate.ps1
-          pyinstaller --noconfirm --onefile --clean --name "${{env.name_full}}" "${{env.filename_full}}.py"
+          pyinstaller --runtime-hook secrets.py --noconfirm --onefile --clean --name "${{env.name_full}}" "${{env.filename_full}}.py"
 
       - uses: actions/upload-artifact@v4
         with:
