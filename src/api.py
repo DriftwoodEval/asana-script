@@ -78,6 +78,15 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                 data["name"] = re.sub(r"\s+", " ", data["name"]).strip()
                 src.utils.get_expired(data)
             else:
+                if data["hold"]:
+                    current_month = datetime.now().month
+                    year = datetime.now().year
+                    if current_month in [1, 2] and data["hold"] not in ["01", "02"]:
+                        year -= 1
+                    hold_date = datetime.strptime(f"{data['hold']}/{year}", "%m/%d/%Y")
+                    if hold_date > datetime.now():
+                        print(f"Skipping {data['name']}, on hold until {data['hold']}.")
+                        continue
                 if not src.config.ADMIN_MODE:
                     if data["notes"] and (
                         datetime.now().strftime("%m/%d")
@@ -91,19 +100,6 @@ def get_asana_tasks_by_color(colors=None, expired=False):
                         )
                         continue
 
-                    if data["hold"]:
-                        current_month = datetime.now().month
-                        year = datetime.now().year
-                        if current_month in [1, 2] and data["hold"] not in ["01", "02"]:
-                            year -= 1
-                        hold_date = datetime.strptime(
-                            f"{data['hold']}/{year}", "%m/%d/%Y"
-                        )
-                        if hold_date > datetime.now():
-                            print(
-                                f"Skipping {data['name']}, on hold until {data['hold']}."
-                            )
-                            continue
                 if sys.platform == "linux":
                     print(
                         f"\n({i}/{project_count})\n{Fore.cyan}{Style.bold}Name:{Style.reset} {data['name']}\n{Fore.magenta}{Style.bold}Link:{Style.reset} {data['permalink_url']}\n{Fore.blue}{Style.bold}Notes:{Style.reset} {data['notes'].strip()}"
