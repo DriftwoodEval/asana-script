@@ -24,7 +24,7 @@ def replace_link(body, link):
 def multiple_questionnaires(data):
     sr = input("Self-Report Link: ")
     pg = input("Parent/Guardian Link: ")
-    message = f"{sr} - Self-Report\n{pg} - Parent/Guardian"
+    message = f"{sr} - Self-Report - {src.config.INITIALS}\n{pg} - Parent/Guardian - {src.config.INITIALS}"
     add_to_notes(
         message,
         data["notes"],
@@ -151,7 +151,7 @@ def what_to_do(data, source: str = None):
 
     if command.startswith("a "):
         additional_text = command[2:].strip()
-        add_to_notes(additional_text, data["notes"], data["gid"], src.config.ADMIN_MODE)
+        add_to_notes(additional_text, data["notes"], data["gid"], True)
         if src.config.ADMIN_MODE:
             if source == "search":
                 print("Select a color:")
