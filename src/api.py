@@ -55,9 +55,6 @@ def get_asana_tasks_by_color(colors=None, expired=False):
             data["messages_sent"] = (
                 data["notes"].lower().count(f"lm {src.config.INITIALS}")
             )
-            data["warnings_sent"] = (
-                data["notes"].lower().count(f"lw {src.config.INITIALS}")
-            )
             data["messages_sent_top"] = 0
             lines = data["notes"].splitlines()
             for j, line in enumerate(lines):
