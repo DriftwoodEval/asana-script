@@ -1,12 +1,46 @@
+import asyncio
 import os
 import re
+import sys
 from datetime import datetime, timedelta
 
-from colored import fg, stylize
+from colored import Fore, Style, fg, stylize
 
 import src.api
 import src.config
 import src.utils
+
+
+def print_project(
+    data: dict,
+    count: list[int, int] = None,
+    fields: list[str] = ["name", "link", "notes"],
+):
+    print_str = []
+    if "name" in fields:
+        name_str = f"Name: {data['name']}"
+        if sys.platform == "linux":
+            name_str = f"{Fore.cyan}{Style.bold}Name:{Style.reset} {data['name']}"
+        print_str.append(name_str)
+
+    if "link" in fields:
+        link_str = f"Link: {data['permalink_url']}"
+        if sys.platform == "linux":
+            link_str = (
+                f"{Fore.magenta}{Style.bold}Link:{Style.reset} {data['permalink_url']}"
+            )
+        print_str.append(link_str)
+
+    if "notes" in fields:
+        notes_str = f"Notes: {data['notes'].strip()}"
+        if sys.platform == "linux":
+            notes_str = (
+                f"{Fore.blue}{Style.bold}Notes:{Style.reset} {data['notes'].strip()}"
+            )
+        print_str.append(notes_str)
+
+    count_str = f"\n({count[0]}/{count[1]})\n" if count else ""
+    print(f"{count_str}" + "\n".join(print_str))
 
 
 def add_to_notes(new_text, current_notes, project_gid, with_initials=False):
@@ -45,7 +79,7 @@ def generate_warning(data):
     print(f"Send this message to {data['name']}:\n{message}")
 
 
-def mark_links(data, allowed_domains, links):
+def mark_links(data, allowed_domains, links: list[str]):
     if len(links) == 1:
         new_body = replace_link(data["notes"], links[0])
         src.api.replace_notes(new_body, data["gid"])
@@ -84,6 +118,8 @@ def mark_links(data, allowed_domains, links):
     ]
     if not new_links:
         src.api.change_color("light-purple", data["gid"])
+        return True
+    return new_body
 
 
 def get_expired(data):
@@ -103,17 +139,48 @@ def get_expired(data):
             pass
 
 
-def what_to_do(data, source: str = None):
+def mark_done_links():
+    src.config.get_consts()
+    projects = src.api.get_asana_tasks_by_color()
+    for project in projects:
+        links = [
+            link
+            for link in re.findall(r"(https?://\S+[\s\S]*?)(?=\n|$)", project["notes"])
+            if " - DONE" not in link
+            and any(domain in link for domain in src.config.allowed_domains)
+        ]
+        for link in links:
+            name = project["name"].strip()
+            done = asyncio.run(src.api.check_q_done(link, name))
+            if done:
+                mark_links(project, src.config.allowed_domains, [link])
+
+
+def what_to_do(
+    data: dict,
+    count: list[int, int] = None,
+    fields: list[str] = ["name", "link", "notes"],
+    source: str = None,
+):
     body = data["notes"]
     if not src.config.ADMIN_MODE:
-        allowed_domains = os.getenv("Q_LINKS").split(",")
+        allowed_domains = ["mhs.com", "pearsonassessments.com"]
         links = [
             link
             for link in re.findall(r"(https?://\S+[\s\S]*?)(?=\n|$)", body)
             if " - DONE" not in link
             and any(domain in link for domain in allowed_domains)
         ]
+        for link in links:
+            done = asyncio.run(src.api.check_q_done(link, data["name"]))
+            if done:
+                no_more_links = mark_links(data, allowed_domains, [link])
+                if no_more_links is True:
+                    return
+                else:
+                    data["notes"] = no_more_links
 
+    print_project(data, count, fields)
     print("a <note> ".ljust(20) + "Add a note with the date")
     print(
         "h <days or date> ".ljust(20)
@@ -121,10 +188,6 @@ def what_to_do(data, source: str = None):
     )
     if not src.config.ADMIN_MODE:
         print("qs ".ljust(20) + "Add the self-report link and the parent/guardian link")
-        if len(links) > 1:
-            print("d ".ljust(20) + "Mark links as done")
-        elif len(links) == 1:
-            print("d ".ljust(20) + "Mark link as done")
         print("m ".ljust(20) + "Message sent")
         print("w ".ljust(20) + "Generate warning and mark as sent")
     print("s ".ljust(20) + "Skip")

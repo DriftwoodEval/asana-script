@@ -17,6 +17,12 @@ if __name__ == "__main__":
         help="The color to filter by, can also be set with environment variable ASANA_COLOR",
     )
     parser.add_argument(
+        "-d",
+        "--done",
+        action="store_true",
+        help="Mark links as done" if not src.config.ADMIN_MODE else argparse.SUPPRESS,
+    )
+    parser.add_argument(
         "-e",
         "--expired",
         action="store_true",
@@ -28,20 +34,19 @@ if __name__ == "__main__":
         nargs="?",
         const="all",
         help=argparse.SUPPRESS
-        if not any(
-            keyring.get_password("asana", key)
-            for key in ["token", "initials"]
-        )
+        if not any(keyring.get_password("asana", key) for key in ["token", "initials"])
         else "Reset stored token and workspace. Choose 'token', 'initials', or leave blank for all",
     )
     args = parser.parse_args()
 
     if args.expired:
-        src.api.get_asana_tasks_by_color(expired=True)
+        src.api.go_through_by_color(expired=True)
+    elif args.done:
+        src.utils.mark_done_links()
     elif args.reset:
         src.config.reset(args.reset)
     elif args.color:
-        src.api.get_asana_tasks_by_color(colors=[args.color])
+        src.api.go_through_by_color(colors=[args.color])
     elif args.search:
         src.api.search_by_name(args.search)
     else:
@@ -52,6 +57,6 @@ if __name__ == "__main__":
             if choice.startswith("s "):
                 src.api.search_by_name(choice[2:].strip())
             elif choice == "c":
-                src.api.get_asana_tasks_by_color(["light-blue"])
+                src.api.go_through_by_color(["light-blue"])
         else:
-            src.api.get_asana_tasks_by_color()
+            src.api.go_through_by_color()

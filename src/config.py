@@ -9,14 +9,29 @@ load_dotenv()
 ADMIN_MODE = getenv("ADMIN_MODE", "True").lower() in ["true", "1", "yes"]
 
 
+# This is a hack to fix AttributeError: 'NoneType' object has no attribute 'dumps', which seems to not actually effect the functionality, but prints a Traceback
+class CustomApiClient(asana.ApiClient):
+    def __del__(self):
+        try:
+            super().__del__()
+        except AttributeError:
+            pass
+
+
 def get_consts():
-    global configuration, projects_api_instance, WORKSPACE_GID, ASANA_COLORS, INITIALS
+    global \
+        configuration, \
+        projects_api_instance, \
+        WORKSPACE_GID, \
+        ASANA_COLORS, \
+        INITIALS, \
+        allowed_domains
 
     configuration = asana.Configuration()
 
     configuration.access_token = get_secret("ASANA_TOKEN", "token")
 
-    api_client = asana.ApiClient(configuration)
+    api_client = CustomApiClient(configuration)
     projects_api_instance = asana.ProjectsApi(api_client)
 
     WORKSPACE_GID = get_secret("ASANA_WORKSPACE_GID", "workspace")
@@ -24,6 +39,8 @@ def get_consts():
     ASANA_COLORS = getenv("ASANA_COLORS", "light-blue").split(",")
 
     INITIALS = get_secret("USER_INITIALS", "initials")
+
+    allowed_domains = ["mhs.com", "pearsonassessments.com"]
 
 
 def get_secret(env_name, key_name):

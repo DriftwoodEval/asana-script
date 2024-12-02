@@ -7,6 +7,7 @@ dependencies = [
     "asana>=5.0.10",
     "colored>=2.2.4",
     "keyring>=25.5.0",
+    "nodriver>=0.38.post1",
     "python-dotenv>=1.0.1",
 ]
 [tool.uv]
