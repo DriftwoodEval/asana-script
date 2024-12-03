@@ -35,7 +35,7 @@ if __name__ == "__main__":
         const="all",
         help=argparse.SUPPRESS
         if not any(keyring.get_password("asana", key) for key in ["token", "initials"])
-        else "Reset stored token and workspace. Choose 'token', 'initials', or leave blank for all",
+        else "Reset stored token and initials. Choose 'token', 'initials', or leave blank for all",
     )
     args = parser.parse_args()
 
