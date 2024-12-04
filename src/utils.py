@@ -1,4 +1,3 @@
-import asyncio
 import os
 import re
 import sys
@@ -9,11 +8,12 @@ from colored import Fore, Style, fg, stylize
 import src.api
 import src.config
 import src.utils
+import src.websites
 
 
 def print_project(
     data: dict,
-    count: list[int, int] = None,
+    count: list[int] | None = None,
     fields: list[str] = ["name", "link", "notes"],
 ):
     print_str = []
@@ -142,7 +142,7 @@ def get_expired(data):
 def mark_done_links():
     src.config.get_consts()
     projects = src.api.get_asana_tasks_by_color()
-    for project in projects:
+    for project in projects:  # pyright: ignore
         links = [
             link
             for link in re.findall(r"(https?://\S+[\s\S]*?)(?=\n|$)", project["notes"])
@@ -151,20 +151,21 @@ def mark_done_links():
         ]
         for link in links:
             name = project["name"].strip()
-            done = asyncio.run(src.api.check_q_done(link, name))
+            done = src.websites.check_q_done(link, name)
             if done:
                 mark_links(project, src.config.allowed_domains, [link])
 
 
 def what_to_do(
     data: dict,
-    count: list[int, int] = None,
+    count: list[int] | None = None,
     fields: list[str] = ["name", "link", "notes"],
-    source: str = None,
+    source: str | None = None,
 ):
     body = data["notes"]
+    allowed_domains = ["mhs.com", "pearsonassessments.com"]
+    links = []
     if not src.config.ADMIN_MODE:
-        allowed_domains = ["mhs.com", "pearsonassessments.com"]
         links = [
             link
             for link in re.findall(r"(https?://\S+[\s\S]*?)(?=\n|$)", body)
@@ -172,7 +173,7 @@ def what_to_do(
             and any(domain in link for domain in allowed_domains)
         ]
         for link in links:
-            done = asyncio.run(src.api.check_q_done(link, data["name"]))
+            done = src.websites.check_q_done(link, data["name"])
             if done:
                 no_more_links = mark_links(data, allowed_domains, [link])
                 if no_more_links is True:
@@ -241,6 +242,7 @@ def what_to_do(
             else:
                 src.api.change_color("light-purple", data["gid"])
     elif command.startswith("h "):
+        hold_date = None
         additional_text = command[2:].strip()
         if "/" in additional_text:
             hold_date = additional_text
@@ -251,7 +253,8 @@ def what_to_do(
             except ValueError:
                 print("Invalid input.")
                 what_to_do(data)
-        add_to_notes("hold " + hold_date, data["notes"], data["gid"], True)
+        if hold_date is not None:
+            add_to_notes("hold " + hold_date, data["notes"], data["gid"], True)
     elif command == "s":
         pass
     elif not src.config.ADMIN_MODE:

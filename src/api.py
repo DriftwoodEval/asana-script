@@ -1,9 +1,7 @@
 import re
 import sys
 from datetime import datetime, timedelta
-from os import getenv
 
-import nodriver as uc
 from asana.rest import ApiException
 
 import src.config
@@ -24,7 +22,8 @@ def get_asana_tasks_by_color(colors=None, expired=False):
 
         api_response = list(
             src.config.projects_api_instance.get_projects_for_workspace(
-                src.config.WORKSPACE_GID, opts
+                src.config.WORKSPACE_GID,
+                opts,  # pyright: ignore (asana api is strange)
             )
         )
 
@@ -32,15 +31,19 @@ def get_asana_tasks_by_color(colors=None, expired=False):
         print(
             "Exception when calling ProjectsApi->get_projects_for_workspace: %s\n" % e
         )
+        return
 
     if api_response:
         filtered_projects = [data for data in api_response if data["color"] in colors]
-
-    return filtered_projects
+        return filtered_projects
 
 
 def go_through_by_color(colors=None, expired=False):
     filtered_projects = get_asana_tasks_by_color()
+
+    if not filtered_projects:
+        print("No projects found.")
+        return
 
     project_count = len(filtered_projects)
 
@@ -123,7 +126,8 @@ def search_by_name(name):
 
         api_response = list(
             src.config.projects_api_instance.get_projects_for_workspace(
-                src.config.WORKSPACE_GID, opts
+                src.config.WORKSPACE_GID,
+                opts,  # pyright: ignore (asana api is strange)
             )
         )
 
@@ -131,6 +135,7 @@ def search_by_name(name):
         print(
             "Exception when calling ProjectsApi->get_projects_for_workspace: %s\n" % e
         )
+        return
 
     if api_response:
         filtered_projects = [
@@ -170,7 +175,10 @@ def replace_notes(new_text, project_gid):
         api_response = src.config.projects_api_instance.update_project(
             body, project_gid, opts={"opt_fields": "name, notes"}
         )
-        print(f"Added note to {api_response['name'].strip()}.")
+        if isinstance(api_response, dict) and "name" in api_response:
+            print(f"Added note to {api_response['name'].strip()}.")
+        else:
+            print("Added note to project")
     except ApiException as e:
         print("Exception when calling ProjectsApi->update_project:: %s\n" % e)
 
@@ -181,35 +189,9 @@ def change_color(color, project_gid):
         api_response = src.config.projects_api_instance.update_project(
             body, project_gid, opts={"opt_fields": "name, color"}
         )
-        print(f"Changed color of {api_response['name'].strip()} to {color}.")
+        if isinstance(api_response, dict) and "name" in api_response:
+            print(f"Changed color of {api_response['name'].strip()} to {color}.")
+        else:
+            print(f"Changed project color to {color}.")
     except ApiException as e:
         print("Exception when calling ProjectsApi->update_project:: %s\n" % e)
-
-
-async def check_q_done(q_link, name):
-    print(f"Checking {q_link} from {name}...")
-    browser = await uc.start(
-        browser_args=["--headless"],
-        browser_executable_path=getenv(
-            "BROWSER_EXECUTABLE_PATH", "/usr/bin/brave-browser"
-        ),
-    )
-    page = await browser.get(q_link)
-
-    complete = False
-
-    if "mhs.com" in q_link:
-        try:
-            thank_you = await page.find("Thank you for completing", timeout=1)
-            complete = thank_you is not None
-        except TimeoutError:
-            complete = False
-    elif "pearsonassessments.com" in q_link:
-        try:
-            test_completed = await page.find("Test Completed!", timeout=1)
-            complete = test_completed is not None
-        except TimeoutError:
-            complete = False
-
-    await page.close()
-    return complete
