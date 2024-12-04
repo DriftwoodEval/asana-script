@@ -7,8 +7,10 @@ on:
 env:
   filename_full: main
   name_full: AsanaScript
-  filename_bare: barebones
-  name_bare: AsanaList
+  filename_bare_m: barebones
+  name_bare_m: Asana_M
+  filename_bare_k: barebones
+  name_bare_k: Asana_K
 
 jobs:
   build_full:
@@ -48,7 +50,7 @@ jobs:
           path: dist/${{env.name_full}}.exe
           if-no-files-found: error
 
-  build_bare:
+  build_bare_m:
     runs-on: windows-latest
 
     steps:
@@ -75,20 +77,61 @@ jobs:
         run: |
           echo "__import__('os').environ.setdefault('ASANA_TOKEN', '$env:ASANA_TOKEN')" > secrets.py
           echo "__import__('os').environ.setdefault('ASANA_WORKSPACE_GID', '$env:ASANA_WORKSPACE_GID')" >> secrets.py
+          echo "__import__('os').environ.setdefault('M_MODE', 'True')" >> secrets.py
 
       - name: Build windows .exe
         run: |
           .venv\Scripts\Activate.ps1
-          pyinstaller --runtime-hook secrets.py --noconfirm --onefile --clean --windowed --name "${{env.name_bare}}" "${{env.filename_bare}}.py"
+          pyinstaller --runtime-hook secrets.py --noconfirm --onefile --clean --windowed --name "${{env.name_bare_m}}" "${{env.filename_bare_m}}.py"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: "${{env.name_bare}}.exe"
-          path: dist/${{env.name_bare}}.exe
+          name: "${{env.name_bare_m}}.exe"
+          path: dist/${{env.name_bare_m}}.exe
+          if-no-files-found: error
+
+  build_bare_k:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install UPX
+        uses: crazy-max/ghaction-upx@v3
+        with:
+          install-only: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install the project
+        run: uv sync --all-extras --dev
+
+      - name: Write secrets
+        env:
+          ASANA_TOKEN: ${{ secrets.ASANA_TOKEN }}
+          ASANA_WORKSPACE_GID: ${{ secrets.ASANA_WORKSPACE_GID }}
+        run: |
+          echo "__import__('os').environ.setdefault('ASANA_TOKEN', '$env:ASANA_TOKEN')" > secrets.py
+          echo "__import__('os').environ.setdefault('ASANA_WORKSPACE_GID', '$env:ASANA_WORKSPACE_GID')" >> secrets.py
+          echo "__import__('os').environ.setdefault('K_MODE', 'True')" >> secrets.py
+
+      - name: Build windows .exe
+        run: |
+          .venv\Scripts\Activate.ps1
+          pyinstaller --runtime-hook secrets.py --noconfirm --onefile --clean --windowed --name "${{env.name_bare_k}}" "${{env.filename_bare_k}}.py"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: "${{env.name_bare_k}}.exe"
+          path: dist/${{env.name_bare_k}}.exe
           if-no-files-found: error
 
   publish:
-    needs: [build_full, build_bare]
+    needs: [build_full, build_bare_m, build_bare_k]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -101,10 +144,12 @@ jobs:
           path: ./
       - uses: actions/download-artifact@v4
         with:
-          name: "${{env.name_bare}}.exe"
+          name: "${{env.name_bare_m}}.exe"
           path: ./
-
-      - run: ls
+      - uses: actions/download-artifact@v4
+        with:
+          name: "${{env.name_bare_k}}.exe"
+          path: ./
 
       - name: Generate release timestamp
         id: timestamp
@@ -112,5 +157,5 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: ${{env.name_full}}.exe,${{env.name_bare}}.exe
+          files: ${{env.name_full}}.exe,${{env.name_bare_m}}.exe,${{env.name_bare_k}}
           tag_name: "v${{ steps.timestamp.outputs.timestamp }}"
