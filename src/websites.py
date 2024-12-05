@@ -204,15 +204,30 @@ def add_client_to_mhs(client: dict, Q: str):
     )
     date_of_birth_field.send_keys(dob)
 
-    male_label = driver.find_element(By.XPATH, "//label[text()='Male']")
-    female_label = driver.find_element(By.XPATH, "//label[text()='Female']")
-
-    if gender == "Male":
-        male_label.click()
+    if Q != "Conners 4":
+        male_label = driver.find_element(By.XPATH, "//label[text()='Male']")
+        female_label = driver.find_element(By.XPATH, "//label[text()='Female']")
+        if gender == "Male":
+            male_label.click()
+        else:
+            female_label.click()
     else:
-        female_label.click()
+        gender_element = driver.find_element(
+            By.CSS_SELECTOR,
+            "select[aria-label*='Gender selection dropdown']",
+        )
+        gender_select = Select(gender_element)
+        if gender == "Male":
+            gender_select.select_by_visible_text("Male")
+        elif gender == "Female":
+            gender_select.select_by_visible_text("Female")
+        else:
+            gender_select.select_by_visible_text("Other")
 
-    purpose_element = driver.find_element(By.CSS_SELECTOR, "select")
+    purpose_element = driver.find_element(
+        By.CSS_SELECTOR,
+        "select[placeholder='Select an option']",
+    )
     purpose = Select(purpose_element)
     purpose.select_by_visible_text("Psychoeducational Evaluation")
 
@@ -226,13 +241,19 @@ def add_client_to_mhs(client: dict, Q: str):
         )
         if error:
             print("A client with the same ID already exists")
+            if Q == "Conners 4":
+                print(
+                    f"Manual intervention required for Conners 4: {client["firstname"]} {client["lastname"]}"
+                )
+                return False
             driver.find_element(
                 By.XPATH, "//span[contains(normalize-space(text()), 'My Assessments')]"
             ).click()
-            if Q == "ASRS":
-                driver.find_element(
-                    By.XPATH, "//span[contains(normalize-space(text()), 'ASRS')]"
-                ).click()
+
+            driver.find_element(
+                By.XPATH, f"//span[contains(normalize-space(text()), '{Q}')]"
+            ).click()
+
             driver.find_element(
                 By.XPATH, "//div[contains(normalize-space(text()), 'Email Invitation')]"
             ).click()
@@ -256,7 +277,7 @@ def add_client_to_mhs(client: dict, Q: str):
 
     except NoSuchElementException:
         print("New client created")
-        pass
+        return True
 
 
 def gen_asrs(client: dict):
@@ -309,6 +330,100 @@ def gen_asrs(client: dict):
     return q_link
 
 
+def gen_conners(client: dict):
+    driver.implicitly_wait(20)
+    driver.find_element(
+        By.XPATH, "//span[contains(normalize-space(text()), 'My Assessments')]"
+    ).click()
+    time.sleep(1)
+    if client["age"] < 6:
+        conners_ver = "Conners EC"
+        driver.find_element(
+            By.XPATH, "//span[contains(normalize-space(text()), 'Conners EC')]"
+        ).click()
+    else:
+        conners_ver = "Conners 4"
+        driver.find_element(
+            By.XPATH, "//span[contains(normalize-space(text()), 'Conners 4')]"
+        ).click()
+    driver.find_element(
+        By.XPATH, "//div[contains(normalize-space(text()), 'Email Invitation')]"
+    ).click()
+
+    client_added = add_client_to_mhs(client, conners_ver)
+
+    if not client_added:
+        print(client)
+
+    description_element = driver.find_element(By.ID, "ddl_Description")
+    description = Select(description_element)
+
+    if client["age"] < 6:
+        description.select_by_visible_text("Conners EC")
+    else:
+        description.select_by_visible_text("Conners 4")
+
+    time.sleep(1.5)  # Rater field is very fussy
+
+    rater_element = driver.find_element(By.ID, "ddl_RaterType")
+    rater = Select(rater_element)
+    rater.select_by_visible_text("Parent")
+
+    time.sleep(1.5)
+
+    language_element = driver.find_element(By.ID, "ddl_Language")
+    language = Select(language_element)
+    language.select_by_visible_text("English")
+
+    rater_name = driver.find_element(By.ID, "txtRaterName")
+    rater_name.send_keys("Parent/Guardian")
+
+    if client["age"] > 9:
+        driver.find_element(By.ID, "btn_addRow").click()
+        time.sleep(1.5)
+        description_element = driver.find_elements(By.ID, "ddl_Description")[1]
+        description = Select(description_element)
+        description.select_by_visible_text("Conners 4")
+
+        time.sleep(1.5)  # Rater field is very fussy
+
+        rater_element = driver.find_elements(By.ID, "ddl_RaterType")[1]
+        rater = Select(rater_element)
+        rater.select_by_visible_text("Self-Report")
+
+        time.sleep(1.5)
+
+        language_element = driver.find_elements(By.ID, "ddl_Language")[1]
+        language = Select(language_element)
+        language.select_by_visible_text("English")
+
+        driver.find_element(By.ID, "_btnnext").click()
+
+        time.sleep(1)
+
+        driver.find_element(By.ID, "btnGenerateLinks").click()
+
+        time.sleep(1)
+
+        q_link_els = driver.find_elements(By.CLASS_NAME, "txtLinkBox")
+        q_links = []
+        for link_el in q_link_els:
+            q_links.append(link_el.get_attribute("value"))
+        return q_links
+
+    driver.find_element(By.ID, "_btnnext").click()
+
+    time.sleep(1)
+
+    driver.find_element(By.ID, "btnGenerateLinks").click()
+
+    time.sleep(1)
+
+    q_link = driver.find_element(By.CLASS_NAME, "txtLinkBox").get_attribute("value")
+
+    return q_link
+
+
 def send_message_ta(client_url: str, message: str):
     driver.get(client_url)
     driver.find_element(
@@ -319,7 +434,7 @@ def send_message_ta(client_url: str, message: str):
         "//div[2]/section/div/a/span/span",
     ).click()
     driver.find_element(By.ID, "message_thread_subject").send_keys(
-        "Please complete the link below"
+        "Please complete the link(s) below"
     )
     time.sleep(1)
     text_field = driver.find_element(By.XPATH, "//section/div/div[3]")
@@ -331,17 +446,29 @@ def send_message_ta(client_url: str, message: str):
     driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 
 
-# TODO:
-# - Add Conners for ADHD
-# - Select the right Conners for age
-# - Send Conners Self if kid is old enough
-# - Pull names from Asana
+def send_asrs(firstname, lastname):
+    log_in_ta()
+    client_url = go_to_client(firstname, lastname)
+    client = extract_client_data(client_url)
 
-# Example flow
-# log_in_ta()
-# client_url = go_to_client("Testman", "Testson")
-# client = extract_client_data(client_url)
-# log_in_mhs()
-# asrs_link = gen_asrs(client)
-# if asrs_link:
-#     send_message_ta(client_url, asrs_link)
+    log_in_mhs()
+    asrs_link = gen_asrs(client)
+    if asrs_link:
+        send_message_ta(client_url, asrs_link)
+
+
+def send_conners(firstname, lastname):
+    log_in_ta()
+    client_url = go_to_client(firstname, lastname)
+    client = extract_client_data(client_url)
+
+    log_in_mhs()
+    conners_link = gen_conners(client)
+    if conners_link:
+        if isinstance(conners_link, list):
+            conners_link = "\n".join(conners_link)
+        send_message_ta(client_url, conners_link)
+
+
+# TODO:
+# - Pull names from Asana
