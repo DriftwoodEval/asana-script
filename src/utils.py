@@ -142,6 +142,7 @@ def get_expired(data):
 def mark_done_links():
     src.config.get_consts()
     projects = src.api.get_asana_tasks_by_color()
+    driver = src.websites.create_driver()
     for project in projects:  # pyright: ignore
         links = [
             link
@@ -151,9 +152,10 @@ def mark_done_links():
         ]
         for link in links:
             name = project["name"].strip()
-            done = src.websites.check_q_done(link, name)
+            done = src.websites.check_q_done(driver, link, name)
             if done:
                 mark_links(project, src.config.allowed_domains, [link])
+    driver.quit()
 
 
 def what_to_do(
@@ -166,6 +168,7 @@ def what_to_do(
     allowed_domains = ["mhs.com", "pearsonassessments.com"]
     links = []
     if not src.config.ADMIN_MODE:
+        driver = src.websites.create_driver()
         links = [
             link
             for link in re.findall(r"(https?://\S+[\s\S]*?)(?=\n|$)", body)
@@ -173,13 +176,14 @@ def what_to_do(
             and any(domain in link for domain in allowed_domains)
         ]
         for link in links:
-            done = src.websites.check_q_done(link, data["name"])
+            done = src.websites.check_q_done(driver, link, data["name"])
             if done:
                 no_more_links = mark_links(data, allowed_domains, [link])
                 if no_more_links is True:
                     return
                 else:
                     data["notes"] = no_more_links
+        driver.quit()
 
     print_project(data, count, fields)
     print("a <note> ".ljust(20) + "Add a note with the date")

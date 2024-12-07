@@ -10,14 +10,17 @@ from selenium.webdriver.support.ui import Select
 
 load_dotenv()
 
-options = webdriver.ChromeOptions()
-options.add_argument("--start-maximized")
-# options.add_argument("--headless=new")
-driver = webdriver.Chrome(options=options)
-driver.implicitly_wait(30)
+
+def create_driver():
+    options = webdriver.ChromeOptions()
+    options.add_argument("--start-maximized")
+    # options.add_argument("--headless=new")
+    driver = webdriver.Chrome(options=options)
+    driver.implicitly_wait(30)
+    return driver
 
 
-def check_q_done(q_link: str, name: str):
+def check_q_done(driver: webdriver.Chrome, q_link: str, name: str):
     driver.implicitly_wait(5)
     print(f"Checking {q_link} from {name}...")
     url = q_link.split(" ")[0]
@@ -43,7 +46,7 @@ def check_q_done(q_link: str, name: str):
     return complete
 
 
-def log_in_ta():
+def log_in_ta(driver: webdriver.Chrome):
     driver.get("https://portal.therapyappointment.com")
 
     username = getenv("TA_USERNAME")
@@ -64,7 +67,7 @@ def log_in_ta():
     submit_button.click()
 
 
-def go_to_client(firstname, lastname):
+def go_to_client(driver: webdriver.Chrome, firstname: str, lastname: str):
     clients_button = driver.find_element(
         by=By.XPATH, value="//*[contains(text(), 'Clients')]"
     )
@@ -92,7 +95,7 @@ def go_to_client(firstname, lastname):
     return driver.current_url
 
 
-def check_if_opened_portal():
+def check_if_opened_portal(driver: webdriver.Chrome):
     try:
         driver.find_element(By.CSS_SELECTOR, "input[aria-checked='true']")
         return True
@@ -100,7 +103,7 @@ def check_if_opened_portal():
         return False
 
 
-def check_if_docs_signed():
+def check_if_docs_signed(driver: webdriver.Chrome):
     try:
         driver.implicitly_wait(5)
         driver.find_element(
@@ -119,7 +122,7 @@ def check_if_docs_signed():
             return "not found"
 
 
-def extract_client_data(client_url: str):
+def extract_client_data(driver: webdriver.Chrome, client_url: str):
     driver.get(client_url)
     name = driver.find_element(By.CLASS_NAME, "text-h4").text
     firstname = name.split(" ")[0]
@@ -156,7 +159,7 @@ def extract_client_data(client_url: str):
     }
 
 
-def log_in_mhs():
+def log_in_mhs(driver: webdriver.Chrome):
     driver.get("https://assess.mhs.com/Account/Login.aspx")
 
     username = getenv("MHS_USERNAME")
@@ -175,7 +178,7 @@ def log_in_mhs():
     sign_in_button.click()
 
 
-def add_client_to_mhs(client: dict, Q: str):
+def add_client_to_mhs(driver: webdriver.Chrome, client: dict, Q: str):
     firstname = client["firstname"]
     lastname = client["lastname"]
     id = client["account_number"]
@@ -242,6 +245,7 @@ def add_client_to_mhs(client: dict, Q: str):
         if error:
             print("A client with the same ID already exists")
             if Q == "Conners 4":
+                # TODO: See if there's any way to automate this still :(
                 print(
                     f"Manual intervention required for Conners 4: {client["firstname"]} {client["lastname"]}"
                 )
@@ -280,7 +284,7 @@ def add_client_to_mhs(client: dict, Q: str):
         return True
 
 
-def gen_asrs(client: dict):
+def gen_asrs(driver: webdriver.Chrome, client: dict):
     driver.implicitly_wait(20)
     driver.find_element(
         By.XPATH, "//span[contains(normalize-space(text()), 'My Assessments')]"
@@ -292,7 +296,7 @@ def gen_asrs(client: dict):
         By.XPATH, "//div[contains(normalize-space(text()), 'Email Invitation')]"
     ).click()
 
-    add_client_to_mhs(client, "ASRS")
+    add_client_to_mhs(driver, client, "ASRS")
 
     description_element = driver.find_element(By.ID, "ddl_Description")
     description = Select(description_element)
@@ -330,7 +334,7 @@ def gen_asrs(client: dict):
     return q_link
 
 
-def gen_conners(client: dict):
+def gen_conners(driver: webdriver.Chrome, client: dict):
     driver.implicitly_wait(20)
     driver.find_element(
         By.XPATH, "//span[contains(normalize-space(text()), 'My Assessments')]"
@@ -350,7 +354,7 @@ def gen_conners(client: dict):
         By.XPATH, "//div[contains(normalize-space(text()), 'Email Invitation')]"
     ).click()
 
-    client_added = add_client_to_mhs(client, conners_ver)
+    client_added = add_client_to_mhs(driver, client, conners_ver)
 
     if not client_added:
         print(client)
@@ -424,7 +428,7 @@ def gen_conners(client: dict):
     return q_link
 
 
-def send_message_ta(client_url: str, message: str):
+def send_message_ta(driver: webdriver.Chrome, client_url: str, message: str):
     driver.get(client_url)
     driver.find_element(
         By.XPATH, "//a[contains(normalize-space(text()), 'Messages')]"
@@ -446,28 +450,28 @@ def send_message_ta(client_url: str, message: str):
     driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 
 
-def send_asrs(firstname, lastname):
-    log_in_ta()
-    client_url = go_to_client(firstname, lastname)
-    client = extract_client_data(client_url)
+def send_asrs(driver: webdriver.Chrome, firstname: str, lastname: str):
+    log_in_ta(driver)
+    client_url = go_to_client(driver, firstname, lastname)
+    client = extract_client_data(driver, client_url)
 
-    log_in_mhs()
-    asrs_link = gen_asrs(client)
+    log_in_mhs(driver)
+    asrs_link = gen_asrs(driver, client)
     if asrs_link:
-        send_message_ta(client_url, asrs_link)
+        send_message_ta(driver, client_url, asrs_link)
 
 
-def send_conners(firstname, lastname):
-    log_in_ta()
-    client_url = go_to_client(firstname, lastname)
-    client = extract_client_data(client_url)
+def send_conners(driver: webdriver.Chrome, firstname: str, lastname: str):
+    log_in_ta(driver)
+    client_url = go_to_client(driver, firstname, lastname)
+    client = extract_client_data(driver, client_url)
 
-    log_in_mhs()
-    conners_link = gen_conners(client)
+    log_in_mhs(driver)
+    conners_link = gen_conners(driver, client)
     if conners_link:
         if isinstance(conners_link, list):
             conners_link = "\n".join(conners_link)
-        send_message_ta(client_url, conners_link)
+        send_message_ta(driver, client_url, conners_link)
 
 
 # TODO:
