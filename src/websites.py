@@ -2,6 +2,7 @@ import time
 from datetime import datetime
 from os import getenv
 
+from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
@@ -147,7 +148,7 @@ def extract_client_data(driver: webdriver.Chrome, client_url: str):
     time.sleep(0.5)
     gender = gender_element.text.split(" ")[0]
 
-    age = datetime.now().year - datetime.strptime(birthdate, "%Y/%m/%d").year
+    age = relativedelta(datetime.now(), datetime.strptime(birthdate, "%Y/%m/%d")).years
     return {
         "firstname": firstname,
         "lastname": lastname,
