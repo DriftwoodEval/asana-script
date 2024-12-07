@@ -88,8 +88,7 @@ def go_to_client(driver: webdriver.Chrome, firstname: str, lastname: str):
     search_button.click()
 
     driver.find_element(
-        By.CSS_SELECTOR,
-        f"a[aria-description='Press Enter to view the profile of {firstname} {lastname}",
+        By.CSS_SELECTOR, "a[aria-description*='Press Enter to view the profile of"
     ).click()
 
     return driver.current_url
